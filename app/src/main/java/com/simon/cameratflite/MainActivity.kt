@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -28,6 +27,7 @@ import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+
 typealias LumaListener = (luma : Double) -> Unit
 
 class MainActivity : AppCompatActivity() {
@@ -40,6 +40,9 @@ class MainActivity : AppCompatActivity() {
     private var recording: Recording? = null
     private var HWlevel: TextView? = null
     private lateinit var cameraExecutor: ExecutorService
+
+    //
+    private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 화면구성 및 viewBinding
@@ -59,6 +62,18 @@ class MainActivity : AppCompatActivity() {
         // 사진 동영상 촬영 버튼 LIstener설정
         viewBinding.imageCaptureButton.setOnClickListener { takePhoto() }
         viewBinding.videoCaptureButton.setOnClickListener { captureVideo() }
+        viewBinding.cameraSwitchButton.setOnClickListener {
+            viewBinding.cameraSwitchButton.isEnabled = false
+            Log.d("SSO","button click!")
+            cameraSelector = if(CameraSelector.DEFAULT_BACK_CAMERA == cameraSelector){
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
+            startCamera()
+            viewBinding.cameraSwitchButton.isEnabled = true
+        }
+
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         // HW 레벨 출력
@@ -77,7 +92,6 @@ class MainActivity : AppCompatActivity() {
             else -> null
         }
         viewBinding.HWLevel.text = "HARDWARE_LEVEL: " + hardwareLevel
-
     }
 
     private fun takePhoto() {
@@ -191,7 +205,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
@@ -219,16 +232,13 @@ class MainActivity : AppCompatActivity() {
                     })
                 }
 
-            // 기본 카메라 설정
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
             //카메라 생명주기와 어플리케이션 binding
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageCapture, videoCapture
                 )
-
+                Log.d("SSO","cameraProvider bind")
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
